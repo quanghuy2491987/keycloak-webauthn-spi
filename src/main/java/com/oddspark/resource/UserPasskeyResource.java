@@ -196,7 +196,7 @@ public class UserPasskeyResource {
     @GET
     @Path(KeycloakConsts.PASSKEY_GET_CHALLENGE_AUTHENTICATION_PATH)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response getCredentialId(@QueryParam("clientId") String clientId, @QueryParam("userName") String userName, @Context UriInfo uriInfo) {
+    public Response getCredentialId(@QueryParam("clientId") String clientId, @QueryParam("userName") String userName) {
 
         logger.info("--------------Generate challenge authentication--------------");
 
@@ -241,11 +241,9 @@ public class UserPasskeyResource {
         String challengeBase64 = Base64UrlUtil.encodeToString(WebAuthnUtil.generateChallenge());
 
         // Create tabId and authSession
-        String tabId = UUID.randomUUID().toString();
-
         AuthenticationSessionManager authSessionManager = new AuthenticationSessionManager(session);
         RootAuthenticationSessionModel rootSession = authSessionManager.createAuthenticationSession(realm, true);
-        AuthenticationSessionModel authSession = rootSession.getAuthenticationSession(client, tabId);
+        AuthenticationSessionModel authSession = rootSession.createAuthenticationSession(client);
 
         //Store challenge in auth session
         long ttl = KeycloakConsts.CHALLENGE_TTL_MINUTE * 60 * 1000;
