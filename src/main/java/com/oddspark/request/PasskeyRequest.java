@@ -1,4 +1,4 @@
-package com.example.keycloak;
+package com.oddspark.request;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
@@ -38,4 +38,10 @@ public class PasskeyRequest {
 
     @JsonProperty("clientId")
     private String clientId;
+
+    @JsonProperty("sessionId")
+    private String sessionId;
+
+    @JsonProperty("tabId")
+    private String tabId;
 }

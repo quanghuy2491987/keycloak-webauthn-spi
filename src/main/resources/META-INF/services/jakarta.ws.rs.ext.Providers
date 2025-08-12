@@ -1,1 +1,1 @@
-com.example.keycloak.CorsFilter
+com.oddspark.filter.PasskeyCorsFilter

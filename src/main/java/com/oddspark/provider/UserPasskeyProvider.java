@@ -1,6 +1,6 @@
-package com.example.keycloak;
+package com.oddspark.provider;
 
-import com.webauthn4j.validator.attestation.trustworthiness.certpath.CertPathTrustworthinessValidator;
+import com.oddspark.resource.UserPasskeyResource;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.services.resource.RealmResourceProvider;
 

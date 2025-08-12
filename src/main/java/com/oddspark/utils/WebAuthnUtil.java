@@ -1,23 +1,28 @@
-package com.example.keycloak;
+package com.oddspark.utils;
 
 import com.webauthn4j.data.attestation.statement.COSEAlgorithmIdentifier;
 import com.webauthn4j.data.client.Origin;
-import com.webauthn4j.util.Base64UrlUtil;
+import org.apache.http.HttpHeaders;
+import org.keycloak.TokenVerifier;
+import org.keycloak.common.VerificationException;
 import org.keycloak.crypto.Algorithm;
-import org.keycloak.models.KeycloakContext;
-import org.keycloak.models.WebAuthnPolicy;
+import org.keycloak.http.HttpRequest;
+import org.keycloak.models.*;
+import org.keycloak.representations.AccessToken;
+import org.keycloak.services.managers.AppAuthManager;
+import org.keycloak.services.managers.AuthenticationManager;
 
 import java.security.SecureRandom;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.List;
 
 public class WebAuthnUtil {
 
+    private static final org.jboss.logging.Logger logger = org.jboss.logging.Logger.getLogger(WebAuthnUtil.class);
     private static final SecureRandom secureRandom = new SecureRandom();
 
     /**
-     * Tạo challenge ngẫu nhiên 32 byte.
+     * Create 32 byte random challenge.
      */
     public static byte[] generateChallenge() {
         byte[] challenge = new byte[32];
@@ -25,20 +30,56 @@ public class WebAuthnUtil {
         return challenge;
     }
 
-    /**
-     * Tạo user id ngẫu nhiên 32 byte (dùng cho WebAuthn).
-     */
-    public static byte[] generateUserId() {
-        byte[] userId = new byte[32];
-        secureRandom.nextBytes(userId);
-        return userId;
-    }
-
     public static String getRpID(KeycloakContext context){
         WebAuthnPolicy policy = getWebAuthnPolicy(context);
         String rpId = policy.getRpId();
         if (rpId == null || rpId.isEmpty()) rpId = context.getUri().getBaseUri().getHost();
         return rpId;
+    }
+
+    /**
+     * Extract Bearer token from HttpRequest
+     * @param request {@link HttpRequest}
+     * @return
+     */
+    public static String extractBearerToken(HttpRequest request) {
+        String authHeader = request.getHttpHeaders().getHeaderString(HttpHeaders.AUTHORIZATION);
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            return authHeader.substring("Bearer ".length());
+        }
+        return null;
+    }
+
+    /**
+     * Get user session from user login
+     * @param session keycloak session
+     * @return user session
+     */
+    public static UserSessionModel authorizerUserSession(KeycloakSession session){
+
+        RealmModel realm = session.getContext().getRealm();
+        UserSessionModel userSession = null;
+
+        // Try check with cookie
+        logger.info("Checking user session with identity cookie");
+        AuthenticationManager.AuthResult authResult = AuthenticationManager.authenticateIdentityCookie(session, realm, true);
+        if (authResult != null) {
+            userSession = authResult.getSession();
+        }
+
+        // 2. If done have in cookie, check with Bearer Token
+        if (userSession == null) {
+
+            AuthenticationManager.AuthResult auth = new AppAuthManager.BearerTokenAuthenticator(session)
+                    .authenticate();
+            logger.info("Checking user session with access token");
+            if (auth != null) {
+                AccessToken accessToken = auth.getToken();
+                String sessionId = accessToken.getSessionId();
+                userSession = session.sessions().getUserSession(realm, sessionId);
+            }
+        }
+        return userSession;
     }
 
     public static Origin getOrigin(KeycloakContext context){
@@ -89,3 +130,4 @@ public class WebAuthnUtil {
         return algs;
     }
 }
+
